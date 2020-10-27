@@ -9,7 +9,7 @@ if __name__ == '__main__' :
     # Set up tracker.
     # Instead of MIL, you can also use
 
-    index = 0 #original:2
+    index = 1 #original:2
     tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
     tracker_type = tracker_types[index]
     # https://www.learnopencv.com/object-tracking-using-opencv-cpp-python/#opencv-tracking-api explanation!
@@ -34,7 +34,7 @@ if __name__ == '__main__' :
             tracker = cv2.TrackerCSRT_create()
 
     # Read video
-    video = cv2.VideoCapture("videos/ants.mp4")
+    video = cv2.VideoCapture("videos/newresult.mp4")
 
     # Exit if video not opened.
     if not video.isOpened():
@@ -51,13 +51,24 @@ if __name__ == '__main__' :
     #bbox = (287, 23, 86, 320)
 
     # Uncomment the line below to select a different bounding box
-    bbox = cv2.selectROI(frame, False)
+
     print('RECIEVED AN ANSWER!')
     #cv2.waitKey(5)
     #cv2.destroyAllWindows()
     # Initialize tracker with first frame and bounding box
+    KONTRASTER = [True,False][1]
+    ctr, br = 1.3, 0.7
+    if KONTRASTER:
+      contrast = ctr
+      brightness = br
+      frame[:,:,2] = np.clip(contrast * frame[:,:,2] + brightness, 0, 255)
+      frame = cv2.cvtColor(frame, cv2.COLOR_HSV2BGR)
+
+    bbox = cv2.selectROI(frame, True)
     ok = tracker.init(frame, bbox)
     print('advancing!')
+    tracks_positions = []
+    counter = 0
     while True:
         # Read a new frame
         ok, frame = video.read()
@@ -67,13 +78,14 @@ if __name__ == '__main__' :
         # Start timer
         timer = cv2.getTickCount()
 
-        if False:
-            contrast = 1.6
-            brightness = 60
+        if KONTRASTER:
+            contrast = ctr
+            brightness = br
             frame[:,:,2] = np.clip(contrast * frame[:,:,2] + brightness, 0, 255)
             frame = cv2.cvtColor(frame, cv2.COLOR_HSV2BGR)
 
         # Update tracker
+        tracks_positions.append(bbox)
         ok, bbox = tracker.update(frame)
 
         # Calculate Frames per second (FPS)
@@ -94,6 +106,10 @@ if __name__ == '__main__' :
     
         # Display FPS on frame
         cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2);
+ 
+        # SAVE
+        cv2.imwrite(f'tracked_frames/{counter:03}.png',frame, )
+        counter+=1
 
         # Display result
         cv2.imshow("Tracking", frame)
@@ -102,5 +118,7 @@ if __name__ == '__main__' :
         k = cv2.waitKey(1) & 0xff
         if k == 30 : break
                 #27
+    np.save('data/tracks_positions.npy',np.asarray(tracks_positions))
+   
 
 
